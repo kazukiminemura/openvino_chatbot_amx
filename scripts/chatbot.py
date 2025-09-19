@@ -7,6 +7,7 @@ import json
 import re
 import signal
 import sys
+import time
 from pathlib import Path
 from threading import Thread
 from typing import Dict, Iterable, List, Optional
@@ -70,6 +71,17 @@ _OV_TO_NUMPY_DTYPE = {
     "u8": np.uint8,
     "boolean": np.bool_,
 }
+
+
+def count_generated_tokens(text: str, tokenizer) -> int:
+    """Return the number of tokens in `text` according to the tokenizer."""
+    if not text:
+        return 0
+    try:
+        tokens = tokenizer.encode(text, add_special_tokens=False)
+    except Exception:  # pragma: no cover - just defensive
+        return 0
+    return len(tokens)
 
 
 def parse_args() -> argparse.Namespace:
@@ -571,6 +583,7 @@ def main() -> None:
 
         prompt = build_prompt(args.system_prompt, dialogue, tokenizer)
         console.print("[bold magenta]Assistant:[/bold magenta] ", end="", highlight=False)
+        start_time = time.perf_counter()
 
         if args.no_stream:
             try:
@@ -589,6 +602,11 @@ def main() -> None:
             except KeyboardInterrupt:
                 console.print("[yellow]\nGeneration interrupted.[/yellow]")
             answer = "".join(buffer).strip()
+
+        elapsed = time.perf_counter() - start_time
+        token_count = count_generated_tokens(answer, tokenizer)
+        tokens_per_second = token_count / elapsed if elapsed > 0 else 0.0
+        console.print(f"[dim green]Tokens: {token_count} | Time: {elapsed:.2f}s | Rate: {tokens_per_second:.2f} tok/s[/dim green]")
         dialogue.append({"role": "assistant", "content": answer})
 
     console.print("[bold green]\nSession finished.[/bold green]")
