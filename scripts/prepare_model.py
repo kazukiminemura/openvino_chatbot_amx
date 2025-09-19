@@ -75,11 +75,10 @@ def export_with_optimum(cli_path: str, args: argparse.Namespace) -> None:
         "openvino",
         "--model",
         args.model_id,
-        "--task",
-        args.task,
-        "--output",
-        str(args.output_dir),
     ]
+
+    if args.task:
+        cmd.extend(["--task", args.task])
 
     if args.precision.lower() in {"int8", "int4"}:
         cmd.extend(["--weight-format", args.precision.lower()])
@@ -88,6 +87,8 @@ def export_with_optimum(cli_path: str, args: argparse.Namespace) -> None:
 
     if args.trust_remote_code:
         cmd.append("--trust-remote-code")
+
+    cmd.append(str(args.output_dir))
 
     env = os.environ.copy()
     if args.model_cache is not None:
